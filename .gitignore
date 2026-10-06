@@ -1,0 +1,9 @@
+.env
+.cache/
+output/
+__pycache__/
+*.pyc
+webull_data_sdk.log*
+.venv/
+.pytest_cache/
+.DS_Store

@@ -1,0 +1,6 @@
+webull-openapi-python-sdk>=1.0.0
+pandas>=2.0
+numpy>=1.24
+PyYAML>=6.0
+rich>=13.0
+python-dotenv>=1.0

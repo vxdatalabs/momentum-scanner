@@ -1,0 +1,53 @@
+# Momentum scanner configuration.
+# Everything you'd want to tune lives here. Nothing in scanner/ needs editing.
+
+api:
+  region: us
+  endpoint: api.webull.com        # api.sandbox.webull.com for the test environment
+  requests_per_second: 1.0        # Webull documents per-App-Key per-second limits;
+                                  # raise cautiously and watch for 429s
+  max_retries: 4
+  bars_batch_size: 20             # symbols per batch bar request
+  snapshot_batch_size: 100        # documented max for stock snapshots
+  option_snapshot_batch_size: 20  # documented max for option snapshots
+
+universe:
+  max_symbols: 600                # cap after the screener union is deduped
+  bar_count: 300                  # daily bars to pull; 300 covers the 252-day window
+  cache_path: .cache/bars.sqlite
+
+# Hard filters. A symbol failing any of these never reaches the scoring stage.
+gates:
+  min_price: 10.0                 # sub-$10 names have poor options structure
+  max_price: 800.0                # above this, single contracts get expensive
+  min_avg_dollar_volume: 25000000 # $25M/day — proxy for a usable options chain
+  min_atr_pct: 0.015              # below ~1.5% daily range, options rarely pay
+  max_atr_pct: 0.15               # above 15%, you're in news-driven gap territory
+  min_bars: 120                   # need history for 63-day returns and MA structure
+  max_single_gap: 0.25            # one 25% gap means the "trend" is a single event
+
+# Factor weights for the composite. They're normalized, so relative size is what
+# matters, not the sum. Each factor is z-scored across the candidate pool first.
+weights:
+  slope_q: 0.30        # annualized log-regression slope x R2 — trend quality
+  ret_21d: 0.15        # one-month return
+  ret_63d: 0.15        # three-month return
+  trend_align: 0.15    # price vs 20EMA/50SMA/200SMA structure
+  range_position: 0.10 # proximity to the 52-week extreme on the relevant side
+  rvol: 0.10           # 20d volume vs 60d volume — participation
+  up_days_20: 0.05     # steadiness rather than one big print
+
+scoring:
+  extension_penalty_atr: 4.0  # beyond this many ATRs from the 20-EMA, deduct score
+
+options:
+  evaluate_top_n: 20     # only the top N per side get option lookups (rate limits)
+  dte_min: 25            # target expiry window; 25-50 DTE is the usual swing zone
+  dte_max: 50
+  strike_band_pct: 0.08  # search strikes within +/-8% of spot
+  candidates_per_symbol: 3
+  max_spread_pct: 0.08   # bid/ask wider than 8% of mid is a fill problem
+  min_open_interest: 250
+  iv_rich_ratio: 1.35    # IV/HV above this favors defined-risk spreads
+  iv_cheap_ratio: 0.85   # below this, long premium is comparatively cheap
+  require_tradable: false # true drops candidates failing spread/OI checks entirely
